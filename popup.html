@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>非アクティブアカウント整理</title>
+    <style>
+        body { font-family: "Segoe UI", Arial, sans-serif; width: 400px; padding: 16px; background-color: #f5f6fa; color: #333; }
+        h2, h3 { margin-top: 0; font-size: 1.4em; color: #2f3640; border-bottom: 2px solid #dcdde1; padding-bottom: 6px; }
+        h3 { font-size: 1.1em; border-bottom: 1px solid #dcdde1; }
+        .card { background-color: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08); }
+        .pending-card { background-color: #fffbe6; border-color: #ffe58f; }
+        .site-info { display: flex; flex-direction: column; }
+        .site-name { font-weight: bold; font-size: 1em; margin-bottom: 2px; }
+        .last-login, .pending-text { font-size: 0.85em; color: #888; }
+        .actions { display: flex; gap: 6px; }
+        button { padding: 4px 8px; border: none; border-radius: 4px; cursor: pointer; color: white; }
+        .btn-yes, .btn-start-monitoring { background-color: #28a745; }
+        .btn-no { background-color: #dc3545; }
+        .btn-change { background-color: #4cd137; }
+        .btn-delete { background-color: #e84118; }
+        .btn-remove { background-color: #7f8fa6; }
+        .btn-save { background-color: #0097e6; }
+        #noAccountsMsg, #modalNoIgnoredMsg { font-weight: bold; color: #999; text-align: center; margin-top: 12px; }
+        #showAllBtn { display: block; margin: 12px auto; background: none; border: none; color: #0097e6; font-size: 0.9em; text-decoration: underline; cursor: pointer; }
+        #settings-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 1000; }
+        #settings-modal-content { background: white; padding: 20px; border-radius: 8px; width: 350px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); max-height: 90%; overflow-y: auto; }
+        #settings-modal-content h3 { font-size: 1.2em; border: none; padding: 0; margin-bottom: 15px; }
+        .settings-section { margin-bottom: 20px; }
+        .option-group { display: flex; align-items: center; margin-bottom: 8px; }
+        .option-group label { margin-right: 10px; font-size: 0.9em; min-width: 60px; }
+        #pass-length, #inactive-days, #notification-interval { width: 60px; }
+        .char-options { display: flex; gap: 15px; flex-wrap: wrap; }
+        .modal-actions { text-align: right; margin-top: 20px; }
+        .modal-actions button { margin-left: 10px; padding: 8px 16px; }
+        .footer-actions { text-align: left; padding-top: 10px; border-top: 1px solid #e0e0e0; margin-top: 10px; }
+        #open-settings-btn { padding: 8px 12px 8px 10px; }
+        #modalIgnoredList { max-height: 150px; overflow-y: auto; border: 1px solid #eee; border-radius: 4px; padding: 5px; }
+        #modalIgnoredList .card { margin-bottom: 5px; }
+    </style>
+</head>
+<body>
+    <h2>監視中アカウント</h2>
+    <div id="pendingList"></div>
+    <div id="siteList"></div>
+    <p id="noAccountsMsg" style="display:none;"></p>
+    <button id="showAllBtn">すべて表示</button>
+
+    <div class="footer-actions">
+        <button id="open-settings-btn" class="btn-remove">⚙️ 設定</button>
+    </div>
+
+    <div id="settings-modal-overlay">
+        <div id="settings-modal-content">
+            <div class="settings-section">
+                <h3>パスワード設定</h3>
+                <div class="option-group">
+                    <label for="pass-length">文字数:</label>
+                    <input type="number" id="pass-length" value="12" min="12" max="128">
+                </div>
+                <div class="option-group">
+                    <div class="char-options">
+                        <label><input type="checkbox" id="cb-upper"> 大文字</label>
+                        <label><input type="checkbox" id="cb-lower"> 小文字</label>
+                        <label><input type="checkbox" id="cb-numbers"> 数字</label>
+                        <label><input type="checkbox" id="cb-symbols"> 特殊文字</label>
+                    </div>
+                </div>
+            </div>
+            <div class="settings-section">
+                <h3>通知設定</h3>
+                <div class="option-group">
+                    <label><input type="checkbox" id="cb-notifications"> 非アクティブサイトの通知を有効にする</label>
+                </div>
+                <div class="option-group">
+                    <label for="inactive-days">非アクティブになるまでの日数:</label>
+                    <input type="number" id="inactive-days" value="90" min="1" max="365">
+                </div>
+                <div class="option-group">
+                    <label for="notification-interval">通知の間隔（日数）:</label>
+                    <input type="number" id="notification-interval" value="7" min="1" max="365">
+                </div>
+            </div>
+            <div class="settings-section">
+                <h3>無視リストの管理</h3>
+                <div id="modalIgnoredList"></div>
+                <p id="modalNoIgnoredMsg" style="display:none;"></p>
+            </div>
+            <div class="modal-actions">
+                <button id="save-settings-btn" class="btn-save">保存</button>
+                <button id="close-settings-btn" class="btn-remove">閉じる</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+</html>
