@@ -39,18 +39,27 @@
     </style>
 </head>
 <body>
+    <!-- メインコンテンツエリア -->
     <h2>監視中アカウント</h2>
+    <!-- 「監視待ち」のサイトがここに挿入される -->
     <div id="pendingList"></div>
+    <!-- 「監視中」のサイトがここに挿入される -->
     <div id="siteList"></div>
+    <!-- 表示するアカウントがない場合にメッセージを表示 -->
     <p id="noAccountsMsg" style="display:none;"></p>
+    <!-- 「すべて表示」と「非アクティブのみ表示」を切り替えるボタン -->
     <button id="showAllBtn">すべて表示</button>
 
+    <!-- フッターエリア -->
     <div class="footer-actions">
         <button id="open-settings-btn" class="btn-remove">⚙️ 設定</button>
     </div>
 
+    <!-- 設定モーダル (初期状態では非表示) -->
+    <!-- このオーバーレイが画面全体を覆い、モーダルウィンドウを中央に表示する -->
     <div id="settings-modal-overlay">
         <div id="settings-modal-content">
+            <!-- パスワード設定セクション -->
             <div class="settings-section">
                 <h3>パスワード設定</h3>
                 <div class="option-group">
@@ -66,6 +75,7 @@
                     </div>
                 </div>
             </div>
+            <!-- 通知設定セクション -->
             <div class="settings-section">
                 <h3>通知設定</h3>
                 <div class="option-group">
@@ -80,11 +90,13 @@
                     <input type="number" id="notification-interval" value="7" min="1" max="365">
                 </div>
             </div>
+            <!-- 無視リスト管理セクション -->
             <div class="settings-section">
                 <h3>無視リストの管理</h3>
                 <div id="modalIgnoredList"></div>
                 <p id="modalNoIgnoredMsg" style="display:none;"></p>
             </div>
+            <!-- モーダルのアクションボタン -->
             <div class="modal-actions">
                 <button id="save-settings-btn" class="btn-save">保存</button>
                 <button id="close-settings-btn" class="btn-remove">閉じる</button>
@@ -92,6 +104,7 @@
         </div>
     </div>
 
+    <!-- JavaScriptファイルを読み込み -->
     <script src="popup.js"></script>
 </body>
 </html>
