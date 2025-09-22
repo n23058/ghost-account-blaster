@@ -32,7 +32,3 @@
 - JavaScript (ES6+)
 - HTML5 / CSS3
 - Chrome Extension API (Manifest V3)
-
-## 🖼️ スクリーンショット
-
-*(ここにポップアップ画面や通知のスクリーンショットを挿入すると、より分かりやすくなります)*
