@@ -1,80 +1,60 @@
-
-// content.js - 各ウェブページに挿入され、ログイン操作を検知するスクリプト
-
+// content.js
 (function () {
-    /**
-     * 短時間（1秒）に同じログインイベントが複数回送信されるのを防ぐためのフラグ。
-     * フォームの送信、Enterキー、クリックイベントが同時に発火することがあるため。
-     */
+    // 短時間での重複送信を防ぐためのフラグ。一度送信したら1秒間は再送信しないようにする。
     let hasSentMessage = false;
 
-    /**
-     * background.jsにログインイベントを通知する関数。
-     * 重複送信を防ぐためのロックと、1秒後のロック解除を行う。
-     */
+    // バックグラウンドスクリプトにログイン試行を通知する関数
     function sendSubmit() {
-        // フラグが立っている（ロック中）場合は、処理を中断
+        // 既にメッセージを送信済みの場合（フラグがtrueの場合）は何もしない
         if (hasSentMessage) {
             return;
         }
         
-        // フラグを立ててロックする
+        // フラグを立てて、短時間での重複送信をブロックする
         hasSentMessage = true;
         
-        // background.jsへメッセージを送信
-        chrome.runtime.sendMessage({ 
-            type: "PASSWORD_SUBMIT", // メッセージの種類：パスワード送信
-            hostname: location.hostname // 現在のページのホスト名
-        });
+        // バックグラウンドスクリプトにメッセージを送信する。タイプと現在のホスト名を伝える。
+        chrome.runtime.sendMessage({ type: "PASSWORD_SUBMIT", hostname: location.hostname });
 
-        // 1秒後にフラグを解除して、次のログイン操作を検知できるようにする
+        // 1秒後にフラグを解除し、次のログイン操作に備える
         setTimeout(() => {
             hasSentMessage = false;
         }, 1000);
     }
 
-    /**
-     * イベントリスナー1：フォームの "submit" イベント
-     * 最も標準的なフォーム送信を捕捉する。
-     * useCaptureフラグをtrueに設定し、イベントが他のスクリプトにキャンセルされる前に捕捉する。
-     */
+    // 通常のフォーム送信（submitイベント）を監視するリスナー
     window.addEventListener("submit", (e) => {
         try {
+            // イベントの対象がHTMLFormElementであることを確認
             const form = e.target;
-            // パスワード入力欄（<input type="password">）を持つフォームの送信のみを対象とする
-            if (form instanceof HTMLFormElement && form.querySelector('input[type="password"]')) {
+            if (!(form instanceof HTMLFormElement)) return;
+            // フォーム内にパスワード入力フィールドがあれば、ログイン試行とみなして関数を呼び出す
+            if (form.querySelector('input[type="password"]')) {
                 sendSubmit();
             }
-        } catch(err) {
-            // エラーが発生しても拡張機能の動作がウェブサイトに影響を与えないようにする
-            console.warn("Ghost Account Blaster (submit listener) Error:", err);
+        } catch (error) {
+            // エラーが発生しても処理を続行する
         }
-    }, true);
+    }, true); // キャプチャフェーズでイベントを捕捉
 
-    /**
-     * イベントリスナー2："Enter" キーの押下
-     * フォーム内でEnterキーを押してログインする操作を捕捉する。
-     */
+    // Enterキーによるフォーム送信を検知するリスナー
     document.addEventListener("keydown", (e) => {
         if (e.key === "Enter") {
-            const activeElement = document.activeElement;
-            // 現在フォーカスが当たっている要素が、パスワード入力欄を持つフォーム内にあるかチェック
-            if (activeElement && activeElement.closest("form")?.querySelector('input[type="password"]')) {
+            // 現在アクティブな要素を取得
+            const active = document.activeElement;
+            // アクティブな要素がフォーム内にあり、そのフォームにパスワードフィールドがあればログイン試行とみなす
+            if (active && active.closest("form")?.querySelector('input[type="password"]')) {
                 sendSubmit();
             }
         }
     });
 
-    /**
-     * イベントリスナー3：ボタンの "click" イベント
-     * JavaScriptでログイン処理を実装しているモダンなウェブサイト（SPAなど）に対応する。
-     * <form>を使わずに<button>のクリックでログインするようなケースを捕捉する。
-     */
+    // ボタンクリックによるログインを検知するリスナー（特にSPAサイトで有効）
     document.addEventListener("click", (e) => {
-        // クリックされた要素がボタン（<button>または<input type="submit">）かチェック
-        const btn = e.target.closest("button, input[type=submit]");
+        // クリックされた要素がボタン（buttonまたはinput[type=submit]）であるかを確認
+        const btn = e.target.closest("button,input[type=submit]");
         if (btn) {
-            // そのボタンが、パスワード入力欄を持つフォームに属しているかチェック
+            // そのボタンがフォーム内にあり、そのフォームにパスワードフィールドがあればログイン試行とみなす
             const form = btn.closest("form");
             if (form && form.querySelector('input[type="password"]')) {
                 sendSubmit();
