@@ -1,6 +1,6 @@
 {
     "manifest_version": 3,
-    "name": "非アクティブアカウント整理",
+    "name": "Ghost Account Blaster",
     "version": "1.0",
     "description": "ログイン履歴を記録し、長期間利用していないアカウントの整理を促します。",
     "permissions": [
