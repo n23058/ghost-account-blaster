@@ -13,8 +13,8 @@
         // フラグを立てて、短時間での重複送信をブロックする
         hasSentMessage = true;
         
-        // バックグラウンドスクリプトにメッセージを送信する。タイプと現在のホスト名を伝える。
-        chrome.runtime.sendMessage({ type: "PASSWORD_SUBMIT", hostname: location.hostname });
+        // バックグラウンドスクリプトにログイン試行があったことを通知する
+        chrome.runtime.sendMessage({ type: "LOGIN_ATTEMPT" });
 
         // 1秒後にフラグを解除し、次のログイン操作に備える
         setTimeout(() => {
