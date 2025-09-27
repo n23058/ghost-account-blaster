@@ -1,7 +1,7 @@
 // background.js
 
 // ログイン試行のチェックが保留中のタブを管理するオブジェクト
-const pendingLoginCheck = {}; // { tabId: { isChecking: boolean } }
+const pendingLoginCheck = {}; // { tabId: { isChecking: boolean, alertTriggered: boolean } }
 
 // ログイン成功が確定した後に呼び出される関数
 async function handleLoginAttempt(hostname) {
@@ -46,54 +46,57 @@ async function handleLoginAttempt(hostname) {
 }
 
 // content scriptから注入され、ページ内のエラーメッセージを確認する関数
-// この関数はbackground.jsのコンテキストではなく、注入先のページのコンテキストで実行される
 function checkForErrorMessages() {
   const errorMessages = [
     "パスワードが間違っている",
     "アカウントが停止されています",
     "パスワードが正しくありません",
+    "Incorrect username or password",
+    "ログインできませんでした",
+    "ID番号とパスワードが一致しません",
   ];
   const pageText = document.body.innerText;
-  const hasError = errorMessages.some((msg) => pageText.includes(msg));
+  // 大文字・小文字を区別せずに比較するため、両方を小文字に変換
+  const lowerCasePageText = pageText.toLowerCase();
+  const hasError = errorMessages.some((msg) =>
+    lowerCasePageText.includes(msg.toLowerCase())
+  );
   return { success: !hasError };
 }
 
 // タブの状態が更新されたときのリスナー
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  // ログイン試行のチェックが保留中のタブで、ページの読み込みが完了したら
+  // チェック保留中のタブで、alertが出ておらず、ページの読み込みが完了したら
   if (
     pendingLoginCheck[tabId] &&
+    !pendingLoginCheck[tabId].alertTriggered &&
     changeInfo.status === "complete" &&
     tab.url &&
     tab.url.startsWith("http")
   ) {
-    // チェック処理の重複実行を防ぐ
     if (pendingLoginCheck[tabId].isChecking) {
       return;
     }
     pendingLoginCheck[tabId].isChecking = true;
 
-    // ページのDOMにアクセスしてエラーメッセージの有無を確認するスクリプトを注入
     chrome.scripting.executeScript(
       {
         target: { tabId: tabId },
         func: checkForErrorMessages,
       },
       (injectionResults) => {
-        // スクリプト注入後のコールバック
         if (chrome.runtime.lastError || !injectionResults || !injectionResults[0]) {
           console.error(
             "Script injection failed: ",
             chrome.runtime.lastError?.message || "No results returned"
           );
-          delete pendingLoginCheck[tabId]; // 失敗したらクリーンアップ
+          delete pendingLoginCheck[tabId];
           return;
         }
 
         const result = injectionResults[0].result;
         const hostname = new URL(tab.url).hostname;
 
-        // 判定結果が「成功」（エラーメッセージなし）の場合
         if (result && result.success) {
           console.log(`Login success detected on ${hostname}`);
           handleLoginAttempt(hostname);
@@ -101,7 +104,6 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
           console.log(`Login failure detected on ${hostname}`);
         }
 
-        // チェック完了後、保留リストから削除
         delete pendingLoginCheck[tabId];
       }
     );
@@ -157,19 +159,32 @@ async function handleUserDecision(hostname, decision) {
 
 // content scriptやpopupからのメッセージを受け取るリスナー
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  const tabId = sender.tab?.id;
+  if (!tabId) return;
+
   if (message.type === "LOGIN_ATTEMPT") {
-    const tabId = sender.tab.id;
-    if (tabId) {
-      // このタブを「ログイン試行チェック保留中」としてマーク
-      pendingLoginCheck[tabId] = { isChecking: false };
-      // タイムアウト処理：10秒経ってもページ遷移が完了しない場合は、チェックを中止
-      setTimeout(() => {
-        if (pendingLoginCheck[tabId]) {
-          delete pendingLoginCheck[tabId];
-        }
-      }, 10000);
+    pendingLoginCheck[tabId] = { isChecking: false, alertTriggered: false };
+
+    // 短い時間待って、alertによる即時失敗を判定する
+    setTimeout(() => {
+      if (pendingLoginCheck[tabId] && pendingLoginCheck[tabId].alertTriggered) {
+        console.log("Login failure detected by alert for tab:", tabId);
+        delete pendingLoginCheck[tabId];
+      }
+    }, 500);
+
+    // ページ遷移が全く起こらない場合のためのタイムアウト
+    setTimeout(() => {
+      if (pendingLoginCheck[tabId]) {
+        delete pendingLoginCheck[tabId];
+      }
+    }, 10000);
+    
+  } else if (message.type === "ALERT_TRIGGERED") {
+    if (pendingLoginCheck[tabId]) {
+      pendingLoginCheck[tabId].alertTriggered = true;
     }
-    return true; // 非同期処理があることを示す
+
   } else if (message.type === "USER_DECISION") {
     handleUserDecision(message.hostname, message.decision).then(() =>
       sendResponse({ status: "ok" })
@@ -228,6 +243,19 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
         message: `${domain} に90日以上ログインしていません。アカウントの整理を検討しましょう。`,
         priority: 2,
       });
+    }
+  }
+});
+
+// リロードを検知してログイン試行をリセットするリスナー
+chrome.webNavigation.onCommitted.addListener((details) => {
+  // リロード操作によってコミットされた場合
+  if (details.transitionType === 'reload') {
+    const tabId = details.tabId;
+    // そのタブがログイン判定中であれば、リセットする
+    if (pendingLoginCheck[tabId]) {
+      console.log(`Reload detected on tab ${tabId}. Resetting login check.`);
+      delete pendingLoginCheck[tabId];
     }
   }
 });

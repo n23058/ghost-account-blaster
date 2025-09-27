@@ -1,5 +1,15 @@
 // content.js
 (function () {
+    // alertが発生したことを検知し、バックグラウンドに通知する
+    const originalAlert = window.alert;
+    window.alert = function() {
+        // chrome.runtimeが利用可能かチェック
+        if (chrome && chrome.runtime) {
+            chrome.runtime.sendMessage({ type: "ALERT_TRIGGERED" });
+        }
+        originalAlert.apply(window, arguments);
+    };
+
     // 短時間での重複送信を防ぐためのフラグ。一度送信したら1秒間は再送信しないようにする。
     let hasSentMessage = false;
 
@@ -13,8 +23,13 @@
         // フラグを立てて、短時間での重複送信をブロックする
         hasSentMessage = true;
         
-        // バックグラウンドスクリプトにログイン試行があったことを通知する
-        chrome.runtime.sendMessage({ type: "LOGIN_ATTEMPT" });
+        // chrome.runtimeが利用可能かチェック
+        if (chrome && chrome.runtime) {
+            chrome.runtime.sendMessage({ type: "LOGIN_ATTEMPT" });
+        } else {
+            // APIが利用できない状況であることをログに残す
+            console.log("Ghost Account Blaster: Cannot send message, API context is unavailable.");
+        }
 
         // 1秒後にフラグを解除し、次のログイン操作に備える
         setTimeout(() => {
@@ -51,8 +66,8 @@
 
     // ボタンクリックによるログインを検知するリスナー（特にSPAサイトで有効）
     document.addEventListener("click", (e) => {
-        // クリックされた要素がボタン（buttonまたはinput[type=submit]）であるかを確認
-        const btn = e.target.closest("button,input[type=submit]");
+        // クリックされた要素がボタン（button, input[type=submit], input[type=button]）であるかを確認
+        const btn = e.target.closest("button,input[type=submit],input[type=button]");
         if (btn) {
             // そのボタンがフォーム内にあり、そのフォームにパスワードフィールドがあればログイン試行とみなす
             const form = btn.closest("form");
