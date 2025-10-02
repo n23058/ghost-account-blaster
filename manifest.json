@@ -9,15 +9,15 @@
         "alarms",
         "notifications",
         "scripting",
-        "webNavigation"
+        "webNavigation",
+        "webRequest"
     ],
     "host_permissions": [
         "<all_urls>"
     ],
     "action": {
         "default_popup": "popup.html",
-        "default_title": "非アクティブアカウント整理",
-        "default_badge": ""
+        "default_title": "Ghost Account Blaster"
     },
     "background": {
         "service_worker": "background.js"
@@ -30,6 +30,6 @@
         }
     ],
     "icons": {
-        "128": "mega.png"
+        "128": "icon.png"
     }
 }

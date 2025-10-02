@@ -1,79 +1,68 @@
-// content.js
 (function () {
-    // alertが発生したことを検知し、バックグラウンドに通知する
-    const originalAlert = window.alert;
-    window.alert = function() {
-        // chrome.runtimeが利用可能かチェック
-        if (chrome && chrome.runtime) {
-            chrome.runtime.sendMessage({ type: "ALERT_TRIGGERED" });
-        }
-        originalAlert.apply(window, arguments);
-    };
+  const originalAlert = window.alert;
+  window.alert = function () {
+    if (chrome && chrome.runtime) {
+      chrome.runtime.sendMessage({ type: "ALERT_TRIGGERED" });
+    }
+    originalAlert.apply(window, arguments);
+  };
 
-    // 短時間での重複送信を防ぐためのフラグ。一度送信したら1秒間は再送信しないようにする。
-    let hasSentMessage = false;
+  let hasSentMessage = false;
 
-    // バックグラウンドスクリプトにログイン試行を通知する関数
-    function sendSubmit() {
-        // 既にメッセージを送信済みの場合（フラグがtrueの場合）は何もしない
-        if (hasSentMessage) {
-            return;
-        }
-        
-        // フラグを立てて、短時間での重複送信をブロックする
-        hasSentMessage = true;
-        
-        // chrome.runtimeが利用可能かチェック
-        if (chrome && chrome.runtime) {
-            chrome.runtime.sendMessage({ type: "LOGIN_ATTEMPT" });
-        } else {
-            // APIが利用できない状況であることをログに残す
-            console.log("Ghost Account Blaster: Cannot send message, API context is unavailable.");
-        }
+  function sendSubmit() {
+    if (hasSentMessage) {
+      return;
+    }
+    hasSentMessage = true;
 
-        // 1秒後にフラグを解除し、次のログイン操作に備える
-        setTimeout(() => {
-            hasSentMessage = false;
-        }, 1000);
+    if (chrome && chrome.runtime) {
+      chrome.runtime.sendMessage({ type: "LOGIN_ATTEMPT" });
+    } else {
+      console.log("Extension context not available for sending message.");
     }
 
-    // 通常のフォーム送信（submitイベント）を監視するリスナー
-    window.addEventListener("submit", (e) => {
-        try {
-            // イベントの対象がHTMLFormElementであることを確認
-            const form = e.target;
-            if (!(form instanceof HTMLFormElement)) return;
-            // フォーム内にパスワード入力フィールドがあれば、ログイン試行とみなして関数を呼び出す
-            if (form.querySelector('input[type="password"]')) {
-                sendSubmit();
-            }
-        } catch (error) {
-            // エラーが発生しても処理を続行する
-        }
-    }, true); // キャプチャフェーズでイベントを捕捉
+    setTimeout(() => {
+      hasSentMessage = false;
+    }, 1000);
+  }
 
-    // Enterキーによるフォーム送信を検知するリスナー
-    document.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") {
-            // 現在アクティブな要素を取得
-            const active = document.activeElement;
-            // アクティブな要素がフォーム内にあり、そのフォームにパスワードフィールドがあればログイン試行とみなす
-            if (active && active.closest("form")?.querySelector('input[type="password"]')) {
-                sendSubmit();
-            }
+  window.addEventListener(
+    "submit",
+    (e) => {
+      try {
+        const form = e.target;
+        if (
+          form instanceof HTMLFormElement &&
+          form.querySelector('input[type="password"]')
+        ) {
+          sendSubmit();
         }
-    });
+      } catch (error) {}
+    },
+    true
+  );
 
-    // ボタンクリックによるログインを検知するリスナー（特にSPAサイトで有効）
-    document.addEventListener("click", (e) => {
-        // クリックされた要素がボタン（button, input[type=submit], input[type=button]）であるかを確認
-        const btn = e.target.closest("button,input[type=submit],input[type=button]");
-        if (btn) {
-            // そのボタンがフォーム内にあり、そのフォームにパスワードフィールドがあればログイン試行とみなす
-            const form = btn.closest("form");
-            if (form && form.querySelector('input[type="password"]')) {
-                sendSubmit();
-            }
-        }
-    });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      const active = document.activeElement;
+      if (
+        active &&
+        active.closest("form")?.querySelector('input[type="password"]')
+      ) {
+        sendSubmit();
+      }
+    }
+  });
+
+  document.addEventListener("click", (e) => {
+    const btn = e.target.closest(
+      "button,input[type=submit],input[type=button]"
+    );
+    if (btn) {
+      const form = btn.closest("form");
+      if (form && form.querySelector('input[type="password"]')) {
+        sendSubmit();
+      }
+    }
+  });
 })();

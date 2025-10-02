@@ -15,7 +15,7 @@
         .actions { display: flex; gap: 6px; }
         button { padding: 4px 8px; border: none; border-radius: 4px; cursor: pointer; color: white; }
         .btn-yes, .btn-start-monitoring { background-color: #28a745; }
-        .btn-no { background-color: #dc3545; }
+        .btn-no, .btn-delete-ignored { background-color: #dc3545; }
         .btn-change { background-color: #4cd137; }
         .btn-delete { background-color: #e84118; }
         .btn-remove { background-color: #7f8fa6; }
@@ -36,9 +36,25 @@
         #open-settings-btn { padding: 8px 12px 8px 10px; }
         #modalIgnoredList { max-height: 150px; overflow-y: auto; border: 1px solid #eee; border-radius: 4px; padding: 5px; }
         #modalIgnoredList .card { margin-bottom: 5px; }
+        .modal-body {
+            text-align: left;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
     </style>
 </head>
 <body>
+    <div id="confirm-modal-overlay" class="settings-modal-overlay" style="display: none;">
+        <div id="confirm-modal-content" class="settings-modal-content">
+            <h3 id="confirm-modal-title"></h3>
+            <div id="confirm-modal-body" class="modal-body"></div>
+            <div class="modal-actions">
+                <button id="confirm-btn-yes" class="btn-save">はい</button>
+                <button id="confirm-btn-no" class="btn-remove">いいえ</button>
+                <button id="confirm-btn-ok" class="btn-save">OK</button>
+            </div>
+        </div>
+    </div>
     <h2>監視中アカウント</h2>
     <div id="pendingList"></div>
     <div id="siteList"></div>
@@ -79,7 +95,7 @@
                     <label for="notification-interval">通知の間隔（日数）:</label>
                     <input type="number" id="notification-interval" value="7" min="1" max="365">
                 </div>
-            </div>
+                </div>
             <div class="settings-section">
                 <h3>無視リストの管理</h3>
                 <div id="modalIgnoredList"></div>
